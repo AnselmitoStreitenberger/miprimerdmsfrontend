@@ -26,28 +26,30 @@ export default function RepuestosForm() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleVehiculoCheckbox = (id) => {
-    if (vehiculoIdsSeleccionados.includes(id)) {
-      setVehiculoIdsSeleccionados(prev => prev.filter(i => i !== id));
-    } else {
-      setVehiculoIdsSeleccionados(prev => [...prev, id]);
-    }
+  const handleVehiculoSeleccion = (e) => {
+    const options = Array.from(e.target.selectedOptions);
+    const ids = options.map(opt => parseInt(opt.value));
+    setVehiculoIdsSeleccionados(ids);
   };
 
-  const handleBuscar = () => {
-    fetch(`${API}/api/repuestos/codigo/${formData.codigo_pieza}`)
-      .then(res => {
-        if (!res.ok) throw new Error("No encontrado");
-        return res.json();
-      })
-      .then(data => {
-        setFormData(data);
-        setModoEdicion(true);
-      })
-      .catch(() => {
-        alert("No se encontró el repuesto. Se procederá a crear uno nuevo.");
-        setModoEdicion(false);
-      });
+  const handleBuscar = async () => {
+    try {
+      const res = await fetch(`${API}/api/repuestos/codigo/${formData.codigo_pieza}`);
+      if (!res.ok) throw new Error("No encontrado");
+      const data = await res.json();
+      setFormData(data);
+      setModoEdicion(true);
+
+      // Buscar relaciones actuales
+      const relRes = await fetch(`${API}/api/repuestosvehiculos/por_codigo/${formData.codigo_pieza}`);
+      const relData = await relRes.json();
+      const actuales = relData.map(r => r.vehiculo_id);
+      setVehiculoIdsSeleccionados(actuales);
+    } catch {
+      alert("No se encontró el repuesto. Se procederá a crear uno nuevo.");
+      setModoEdicion(false);
+      setVehiculoIdsSeleccionados([]);
+    }
   };
 
   const handleSubmit = async () => {
@@ -67,8 +69,18 @@ export default function RepuestosForm() {
       return;
     }
 
-    // Asociar repuesto con los vehículos seleccionados
-    const relaciones = vehiculoIdsSeleccionados.map(vehiculo_id => ({
+    // Eliminar relaciones viejas
+    const deleteRes = await fetch(`${API}/api/repuestosvehiculos/por_codigo/${formData.codigo_pieza}`);
+    const relacionesViejas = await deleteRes.json();
+
+    for (const rel of relacionesViejas) {
+      await fetch(`${API}/api/repuestosvehiculos/${formData.codigo_pieza}/${rel.vehiculo_id}`, {
+        method: "DELETE"
+      });
+    }
+
+    // Crear nuevas relaciones
+    const nuevasRelaciones = vehiculoIdsSeleccionados.map(vehiculo_id => ({
       codigo_pieza: formData.codigo_pieza,
       vehiculo_id
     }));
@@ -76,10 +88,10 @@ export default function RepuestosForm() {
     await fetch(`${API}/api/repuestosvehiculos/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(relaciones)
+      body: JSON.stringify(nuevasRelaciones)
     });
 
-    alert("Repuesto guardado y vehículos asociados correctamente");
+    alert("Repuesto guardado y relaciones actualizadas");
     setModoEdicion(true);
   };
 
@@ -115,19 +127,18 @@ export default function RepuestosForm() {
 
       <div className="mb-6">
         <label className="block font-semibold mb-2">Vehículos asociados:</label>
-        <div className="grid grid-cols-2 gap-2">
+        <select
+          multiple
+          value={vehiculoIdsSeleccionados}
+          onChange={handleVehiculoSeleccion}
+          className="border p-2 w-full h-40"
+        >
           {vehiculos.map(v => (
-            <label key={v.id} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                value={v.id}
-                checked={vehiculoIdsSeleccionados.includes(v.id)}
-                onChange={() => handleVehiculoCheckbox(v.id)}
-              />
-              <span>{v.nombre} ({v.codigo_manual})</span>
-            </label>
+            <option key={v.id} value={v.id}>
+              {v.nombre} ({v.codigo_manual})
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       <button onClick={handleSubmit} className="bg-blue-600 text-white px-6 py-2 rounded w-full">
