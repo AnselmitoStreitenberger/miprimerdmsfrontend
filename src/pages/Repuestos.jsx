@@ -11,7 +11,8 @@ export default function Repuestos() {
   const [vehiculosVisibles, setVehiculosVisibles] = useState({});
   const [compatiblesPorCodigo, setCompatiblesPorCodigo] = useState({});
   const [compatiblesVisibles, setCompatiblesVisibles] = useState({});
-
+  const [multiplicador, setMultiplicador] = useState(1200);
+  const [valorTemp, setValorTemp] = useState(1200);
 
   useEffect(() => {
     fetch(`${API}/api/vehiculos/`)
@@ -38,7 +39,6 @@ export default function Repuestos() {
       });
   };
 
-  
   const toggleMostrarCompatibles = async (codigo_pieza) => {
     if (compatiblesVisibles[codigo_pieza]) {
       setCompatiblesVisibles({ ...compatiblesVisibles, [codigo_pieza]: false });
@@ -60,15 +60,12 @@ export default function Repuestos() {
     setCompatiblesVisibles({ ...compatiblesVisibles, [codigo_pieza]: true });
   };
 
-
   const toggleMostrarVehiculos = async (codigo_pieza) => {
-    // Si ya está visible, lo ocultamos
     if (vehiculosVisibles[codigo_pieza]) {
       setVehiculosVisibles({ ...vehiculosVisibles, [codigo_pieza]: false });
       return;
     }
 
-    // Si no está cargado, lo buscamos
     if (!vehiculosPorCodigo[codigo_pieza]) {
       try {
         const res = await fetch(`${API}/api/repuestosvehiculos/por_codigo/${codigo_pieza}`);
@@ -87,12 +84,11 @@ export default function Repuestos() {
       }
     }
 
-    // Mostrar en pantalla
     setVehiculosVisibles({ ...vehiculosVisibles, [codigo_pieza]: true });
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <h2 className="text-xl font-bold mb-4 text-center">Buscar Repuestos</h2>
       <div className="flex justify-center items-center mb-4">
         <input
@@ -103,6 +99,22 @@ export default function Repuestos() {
         />
         <button onClick={handleBuscar} className="bg-blue-600 text-white px-4 py-2 rounded">
           Buscar
+        </button>
+      </div>
+
+      <div className="flex justify-center items-center mb-4">
+        <input
+          type="number"
+          className="border p-2 mr-2 w-40"
+          placeholder="Multiplicador"
+          value={valorTemp}
+          onChange={(e) => setValorTemp(Number(e.target.value))}
+        />
+        <button
+          onClick={() => setMultiplicador(valorTemp)}
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Actualizar
         </button>
       </div>
 
@@ -117,6 +129,9 @@ export default function Repuestos() {
               <th className="border px-4 py-2">Código</th>
               <th className="border px-4 py-2">Descripción</th>
               <th className="border px-4 py-2">Precio</th>
+              <th className="border px-4 py-2">Precio de Costo</th>
+              <th className="border px-4 py-2">Precio a Cliente</th>
+              <th className="border px-4 py-2">Ganancia</th>
               <th className="border px-4 py-2">Stock Mín</th>
               <th className="border px-4 py-2">Stock Real</th>
               <th className="border px-4 py-2">Stock Disp</th>
@@ -125,47 +140,70 @@ export default function Repuestos() {
             </tr>
           </thead>
           <tbody>
-            {resultados.map((r, index) => (
-              <tr key={index} className="text-center hover:bg-gray-50">
-                <td className="border px-4 py-2">{r.codigo_pieza}</td>
-                <td className="border px-4 py-2">{r.descripcion}</td>
-                <td className="border px-4 py-2">{r.precio}</td>
-                <td className="border px-4 py-2">{r.stock_min}</td>
-                <td className="border px-4 py-2">{r.stock_real}</td>
-                <td className="border px-4 py-2">{r.stock_disp}</td>
-                <td className="border px-4 py-2">
-                  <button
-                    onClick={() => toggleMostrarVehiculos(r.codigo_pieza)}
-                    className="text-blue-600 underline"
-                  >
-                    Vehículos asociados
-                  </button>
-                  {vehiculosVisibles[r.codigo_pieza] && (
-                    <ul className="mt-2 list-disc list-inside text-left">
-                      {(vehiculosPorCodigo[r.codigo_pieza] || []).map((desc, idx) => (
-                        <li key={idx}>{desc}</li>
-                      ))}
-                    </ul>
-                  )}
-                </td>
-                <td className="border px-4 py-2">
-                  <button
-                    onClick={() => toggleMostrarCompatibles(r.codigo_pieza)}
-                    className="text-green-600 underline"
-                  >
-                    Compatibles
-                  </button>
-                  {compatiblesVisibles[r.codigo_pieza] && (
-                    <ul className="mt-2 list-disc list-inside text-left">
-                      {(compatiblesPorCodigo[r.codigo_pieza] || []).map((c, idx) => (
-                        <li key={idx}>{c}</li>
-                      ))}
-                    </ul>
-                  )}
-                </td>
+            {resultados.map((r, index) => {
+              const precioCosto = r.precio * multiplicador * 1.28;
+              const precioCliente = precioCosto * 1.6;
+              const ganancia = precioCliente - precioCosto;
 
-              </tr>
-            ))}
+              return (
+                <tr key={index} className="text-center hover:bg-gray-50">
+                  <td className="border px-4 py-2">{r.codigo_pieza}</td>
+                  <td className="border px-4 py-2">{r.descripcion}</td>
+                  <td className="border px-4 py-2">{r.precio}</td>
+                  <td className="border px-4 py-2">
+                    {precioCosto.toLocaleString("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                    })}
+                  </td>
+                  <td className="border px-4 py-2">
+                    {precioCliente.toLocaleString("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                    })}
+                  </td>
+                  <td className="border px-4 py-2">
+                    {ganancia.toLocaleString("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                    })}
+                  </td>
+                  <td className="border px-4 py-2">{r.stock_min}</td>
+                  <td className="border px-4 py-2">{r.stock_real}</td>
+                  <td className="border px-4 py-2">{r.stock_disp}</td>
+                  <td className="border px-4 py-2">
+                    <button
+                      onClick={() => toggleMostrarVehiculos(r.codigo_pieza)}
+                      className="text-blue-600 underline"
+                    >
+                      Vehículos asociados
+                    </button>
+                    {vehiculosVisibles[r.codigo_pieza] && (
+                      <ul className="mt-2 list-disc list-inside text-left">
+                        {(vehiculosPorCodigo[r.codigo_pieza] || []).map((desc, idx) => (
+                          <li key={idx}>{desc}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
+                  <td className="border px-4 py-2">
+                    <button
+                      onClick={() => toggleMostrarCompatibles(r.codigo_pieza)}
+                      className="text-green-600 underline"
+                    >
+                      Compatibles
+                    </button>
+                    {compatiblesVisibles[r.codigo_pieza] && (
+                      <ul className="mt-2 list-disc list-inside text-left">
+                        {(compatiblesPorCodigo[r.codigo_pieza] || []).map((c, idx) => (
+                          <li key={idx}>{c}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
