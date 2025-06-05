@@ -9,6 +9,9 @@ export default function Repuestos() {
   const [vehiculosPorCodigo, setVehiculosPorCodigo] = useState({});
   const [vehiculosDisponibles, setVehiculosDisponibles] = useState([]);
   const [vehiculosVisibles, setVehiculosVisibles] = useState({});
+  const [compatiblesPorCodigo, setCompatiblesPorCodigo] = useState({});
+  const [compatiblesVisibles, setCompatiblesVisibles] = useState({});
+
 
   useEffect(() => {
     fetch(`${API}/api/vehiculos/`)
@@ -34,6 +37,29 @@ export default function Repuestos() {
         setResultados([]);
       });
   };
+
+  
+  const toggleMostrarCompatibles = async (codigo_pieza) => {
+    if (compatiblesVisibles[codigo_pieza]) {
+      setCompatiblesVisibles({ ...compatiblesVisibles, [codigo_pieza]: false });
+      return;
+    }
+
+    if (!compatiblesPorCodigo[codigo_pieza]) {
+      try {
+        const res = await fetch(`${API}/api/repuestoscompatibles/${codigo_pieza}`);
+        if (!res.ok) throw new Error("Error al obtener compatibles");
+        const compatibles = await res.json();
+        setCompatiblesPorCodigo((prev) => ({ ...prev, [codigo_pieza]: compatibles }));
+      } catch (error) {
+        console.error("Error al obtener compatibles:", error);
+        setCompatiblesPorCodigo((prev) => ({ ...prev, [codigo_pieza]: [] }));
+      }
+    }
+
+    setCompatiblesVisibles({ ...compatiblesVisibles, [codigo_pieza]: true });
+  };
+
 
   const toggleMostrarVehiculos = async (codigo_pieza) => {
     // Si ya está visible, lo ocultamos
@@ -95,6 +121,7 @@ export default function Repuestos() {
               <th className="border px-4 py-2">Stock Real</th>
               <th className="border px-4 py-2">Stock Disp</th>
               <th className="border px-4 py-2">Vehículos</th>
+              <th className="border px-4 py-2">Compatibles</th>
             </tr>
           </thead>
           <tbody>
@@ -121,6 +148,22 @@ export default function Repuestos() {
                     </ul>
                   )}
                 </td>
+                <td className="border px-4 py-2">
+                  <button
+                    onClick={() => toggleMostrarCompatibles(r.codigo_pieza)}
+                    className="text-green-600 underline"
+                  >
+                    Compatibles
+                  </button>
+                  {compatiblesVisibles[r.codigo_pieza] && (
+                    <ul className="mt-2 list-disc list-inside text-left">
+                      {(compatiblesPorCodigo[r.codigo_pieza] || []).map((c, idx) => (
+                        <li key={idx}>{c}</li>
+                      ))}
+                    </ul>
+                  )}
+                </td>
+
               </tr>
             ))}
           </tbody>

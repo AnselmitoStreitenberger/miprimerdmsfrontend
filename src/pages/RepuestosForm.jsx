@@ -14,6 +14,9 @@ export default function RepuestosForm() {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [vehiculos, setVehiculos] = useState([]);
   const [vehiculoIdsSeleccionados, setVehiculoIdsSeleccionados] = useState([]);
+  const [repuestosCompatibles, setRepuestosCompatibles] = useState([]);
+  const [inputCompatibilidad, setInputCompatibilidad] = useState("");
+
 
   useEffect(() => {
     fetch(`${API}/api/vehiculos/`)
@@ -45,6 +48,10 @@ export default function RepuestosForm() {
       const relData = await relRes.json();
       const actuales = relData.map(r => r.vehiculo_id);
       setVehiculoIdsSeleccionados(actuales);
+      const compRes = await fetch(`${API}/api/repuestoscompatibles/${formData.codigo_pieza}`);
+      const compData = await compRes.json();
+      setRepuestosCompatibles(compData);
+
     } catch {
       alert("No se encontró el repuesto. Se procederá a crear uno nuevo.");
       setModoEdicion(false);
@@ -91,6 +98,32 @@ export default function RepuestosForm() {
       body: JSON.stringify(nuevasRelaciones)
     });
 
+
+    // Eliminar compatibilidades viejas
+    const eliminarExistentes = await fetch(`${API}/api/repuestoscompatibles/${formData.codigo_pieza}`);
+    const existentes = await eliminarExistentes.json();
+    for (const c of existentes) {
+      await fetch(`${API}/api/repuestoscompatibles`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codigo_pieza_1: formData.codigo_pieza,
+          codigo_pieza_2: c
+        })
+      });
+    }
+
+    // Crear nuevas compatibilidades
+    for (const otro of repuestosCompatibles) {
+      await fetch(`${API}/api/repuestoscompatibles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codigo_pieza_1: formData.codigo_pieza,
+          codigo_pieza_2: otro
+        })
+      });
+    }
     alert("Repuesto guardado y relaciones actualizadas");
     setModoEdicion(true);
   };
@@ -140,6 +173,50 @@ export default function RepuestosForm() {
           ))}
         </select>
       </div>
+      <div className="mb-6">
+        <label className="block font-semibold mb-2">Repuestos compatibles:</label>
+        <div className="flex mb-2">
+          <input
+            type="text"
+            placeholder="Ingresá código de pieza compatible"
+            value={inputCompatibilidad}
+            onChange={(e) => setInputCompatibilidad(e.target.value)}
+            className="border p-2 w-full mr-2"
+          />
+          <button
+            onClick={() => {
+              const nuevo = inputCompatibilidad.trim().toLowerCase();
+              if (
+                nuevo &&
+                nuevo !== formData.codigo_pieza.toLowerCase() &&
+                !repuestosCompatibles.includes(nuevo)
+              ) {
+                setRepuestosCompatibles([...repuestosCompatibles, nuevo]);
+              }
+              setInputCompatibilidad("");
+            }}
+            className="bg-green-600 text-white px-4 py-1 rounded"
+          >
+            Agregar
+          </button>
+        </div>
+        <ul className="list-disc list-inside">
+          {repuestosCompatibles.map((codigo) => (
+            <li key={codigo} className="flex justify-between items-center">
+              <span>{codigo}</span>
+              <button
+                onClick={() =>
+                  setRepuestosCompatibles(repuestosCompatibles.filter((c) => c !== codigo))
+                }
+                className="text-red-500 ml-2"
+              >
+                Quitar
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
 
       <button onClick={handleSubmit} className="bg-blue-600 text-white px-6 py-2 rounded w-full">
         {modoEdicion ? "Actualizar" : "Crear"} Repuesto
