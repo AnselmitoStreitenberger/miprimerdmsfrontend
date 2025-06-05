@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -11,11 +11,27 @@ export default function RepuestosForm() {
     stock_real: "",
     stock_disp: ""
   });
-
   const [modoEdicion, setModoEdicion] = useState(false);
+  const [vehiculos, setVehiculos] = useState([]);
+  const [vehiculoIdsSeleccionados, setVehiculoIdsSeleccionados] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API}/api/vehiculos/`)
+      .then(res => res.json())
+      .then(data => setVehiculos(data))
+      .catch(err => console.error("Error al cargar vehículos", err));
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleVehiculoCheckbox = (id) => {
+    if (vehiculoIdsSeleccionados.includes(id)) {
+      setVehiculoIdsSeleccionados(prev => prev.filter(i => i !== id));
+    } else {
+      setVehiculoIdsSeleccionados(prev => [...prev, id]);
+    }
   };
 
   const handleBuscar = () => {
@@ -34,25 +50,37 @@ export default function RepuestosForm() {
       });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const method = modoEdicion ? "PUT" : "POST";
     const url = modoEdicion
       ? `${API}/api/repuestos/${formData.codigo_pieza}`
       : `${API}/api/repuestos/`;
 
-    fetch(url, {
-      method: method,
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData)
-    })
-      .then(res => {
-        if (!res.ok) throw new Error("Error al guardar");
-        alert("Repuesto guardado correctamente");
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Error al guardar el repuesto.");
-      });
+    });
+
+    if (!res.ok) {
+      alert("Error al guardar el repuesto.");
+      return;
+    }
+
+    // Asociar repuesto con los vehículos seleccionados
+    const relaciones = vehiculoIdsSeleccionados.map(vehiculo_id => ({
+      codigo_pieza: formData.codigo_pieza,
+      vehiculo_id
+    }));
+
+    await fetch(`${API}/api/repuestosvehiculos/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(relaciones)
+    });
+
+    alert("Repuesto guardado y vehículos asociados correctamente");
+    setModoEdicion(true);
   };
 
   return (
@@ -85,7 +113,24 @@ export default function RepuestosForm() {
         </div>
       ))}
 
-      <button onClick={handleSubmit} className="bg-blue-600 text-white px-6 py-2 rounded">
+      <div className="mb-6">
+        <label className="block font-semibold mb-2">Vehículos asociados:</label>
+        <div className="grid grid-cols-2 gap-2">
+          {vehiculos.map(v => (
+            <label key={v.id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                value={v.id}
+                checked={vehiculoIdsSeleccionados.includes(v.id)}
+                onChange={() => handleVehiculoCheckbox(v.id)}
+              />
+              <span>{v.nombre} ({v.codigo_manual})</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={handleSubmit} className="bg-blue-600 text-white px-6 py-2 rounded w-full">
         {modoEdicion ? "Actualizar" : "Crear"} Repuesto
       </button>
     </div>

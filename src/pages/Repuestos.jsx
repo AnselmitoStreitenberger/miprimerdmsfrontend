@@ -8,19 +8,23 @@ export default function Repuestos() {
   const [buscado, setBuscado] = useState(false);
 
   const handleBuscar = () => {
-    fetch(`${API}/api/repuestos/?codigo_pieza=${codigo}`)
+    fetch(`${API}/api/repuestos?codigo_pieza=${encodeURIComponent(codigo)}`)
       .then(res => {
         if (!res.ok) throw new Error("Error al buscar repuesto");
         return res.json();
       })
       .then(data => {
-        setResultados(data.results);
         setBuscado(true);
+        setResultados(data.results || []);
+        if (!data.results || data.results.length === 0) {
+          alert("No se encontraron repuestos.");
+        }
       })
       .catch(err => {
-        console.error("Error en la búsqueda:", err);
-        setResultados([]);
+        console.error(err);
+        alert("No se pudo buscar el repuesto.");
         setBuscado(true);
+        setResultados([]);
       });
   };
 
@@ -53,6 +57,7 @@ export default function Repuestos() {
               <th className="border px-4 py-2">Stock Mín</th>
               <th className="border px-4 py-2">Stock Real</th>
               <th className="border px-4 py-2">Stock Disp</th>
+              <th className="border px-4 py-2">Vehículos</th>
             </tr>
           </thead>
           <tbody>
@@ -64,6 +69,19 @@ export default function Repuestos() {
                 <td className="border px-4 py-2">{r.stock_min}</td>
                 <td className="border px-4 py-2">{r.stock_real}</td>
                 <td className="border px-4 py-2">{r.stock_disp}</td>
+                <td className="border px-4 py-2">
+                  <select className="border p-1 w-full">
+                    {r.vehiculos && r.vehiculos.length > 0 ? (
+                      r.vehiculos.map((v, idx) => (
+                        <option key={idx}>
+                          {v.nombre} ({v.ano}) - {v.codigo_manual}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>No asociados</option>
+                    )}
+                  </select>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -72,3 +90,4 @@ export default function Repuestos() {
     </div>
   );
 }
+
