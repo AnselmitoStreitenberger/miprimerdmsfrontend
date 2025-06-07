@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Repuestos from "./pages/Repuestos";
 import RepuestosForm from "./pages/RepuestosForm";
 import Vehiculos from "./pages/Vehiculos";
+import Pedidos from "./pages/Pedidos";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/repuestos" element={<Repuestos />} />
           <Route path="/repuestos/cargar" element={<RepuestosForm />} />
           <Route path="/vehiculos" element={<Vehiculos />} />
+          <Route path="/pedidos" element={<Pedidos />} />
         </Routes>
       </div>
     </div>

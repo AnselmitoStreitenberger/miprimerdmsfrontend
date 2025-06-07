@@ -17,6 +17,9 @@ export default function Sidebar() {
         <Link to="/vehiculos" className="hover:bg-gray-700 p-2 rounded">
           Vehículos
         </Link>
+        <Link to="/pedidos" className="hover:bg-gray-700 p-2 rounded">
+          Pedidos
+        </Link>
       </nav>
     </div>
   );
