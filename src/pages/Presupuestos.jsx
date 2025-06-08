@@ -9,10 +9,22 @@ export default function Presupuestos() {
   const [sePidio, setSePidio] = useState(false);
   const [mensaje, setMensaje] = useState("");
 
+  // Para agregar repuestos
+  const [codigoPieza, setCodigoPieza] = useState("");
+  const [cantidad, setCantidad] = useState(1);
+  const [repuestosPorPresupuesto, setRepuestosPorPresupuesto] = useState({});
+
   const fetchPresupuestos = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/presupuestos");
       setPresupuestos(res.data);
+
+      // Para cada presupuesto, traemos sus repuestos
+      res.data.forEach(async (p) => {
+        const items = await axios.get("http://localhost:5000/api/repuestospresupuestos/");
+        const filtrados = items.data.filter((r) => r.presupuesto_id === p.id);
+        setRepuestosPorPresupuesto((prev) => ({ ...prev, [p.id]: filtrados }));
+      });
     } catch (error) {
       console.error("Error al cargar presupuestos", error);
     }
@@ -41,6 +53,23 @@ export default function Presupuestos() {
     } catch (error) {
       setMensaje("Error al guardar presupuesto");
       console.error(error);
+    }
+  };
+
+  const agregarRepuesto = async (presupuesto_id) => {
+    if (!codigoPieza || cantidad <= 0) return;
+
+    try {
+      await axios.post("http://localhost:5000/api/repuestospresupuestos/", {
+        codigo_pieza: codigoPieza,
+        presupuesto_id,
+        cantidad: parseInt(cantidad),
+      });
+      setCodigoPieza("");
+      setCantidad(1);
+      fetchPresupuestos();
+    } catch (err) {
+      console.error("Error al agregar repuesto", err);
     }
   };
 
@@ -100,19 +129,53 @@ export default function Presupuestos() {
       <table className="min-w-full border text-sm">
         <thead className="bg-gray-100">
           <tr>
+            <th className="border p-2">ID</th>
             <th className="border p-2">Vehículo ID</th>
             <th className="border p-2">Cliente ID</th>
             <th className="border p-2">Precio</th>
             <th className="border p-2">Se pidió</th>
+            <th className="border p-2">Repuestos</th>
           </tr>
         </thead>
         <tbody>
-          {presupuestos.map((p, i) => (
-            <tr key={i} className="hover:bg-gray-50">
+          {presupuestos.map((p) => (
+            <tr key={p.id} className="align-top">
+              <td className="border p-2">{p.id}</td>
               <td className="border p-2">{p.vehiculo_id}</td>
               <td className="border p-2">{p.cliente_id}</td>
               <td className="border p-2">${p.precio.toFixed(2)}</td>
               <td className="border p-2">{p.se_pidio ? "Sí" : "No"}</td>
+              <td className="border p-2">
+                <ul className="mb-2">
+                  {(repuestosPorPresupuesto[p.id] || []).map((r, idx) => (
+                    <li key={idx}>
+                      {r.codigo_pieza} - {r.cantidad} u.
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Código pieza"
+                    value={codigoPieza}
+                    onChange={(e) => setCodigoPieza(e.target.value)}
+                    className="border p-1 w-32"
+                  />
+                  <input
+                    type="number"
+                    value={cantidad}
+                    min={1}
+                    onChange={(e) => setCantidad(e.target.value)}
+                    className="border p-1 w-20"
+                  />
+                  <button
+                    onClick={() => agregarRepuesto(p.id)}
+                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
