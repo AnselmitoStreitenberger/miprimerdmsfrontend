@@ -7,6 +7,8 @@ import Vehiculos from "./pages/Vehiculos";
 import Pedidos from "./pages/Pedidos";
 import Clientes from "./pages/Clientes";
 import Presupuestos from "./pages/Presupuestos";
+import Pedidos_Clientes from "./pages/Pedidos_Clientes";
+import Crear_Pedidos from "./pages/Crear_Pedidos";
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
           <Route path="/pedidos" element={<Pedidos />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/presupuestos" element={<Presupuestos />} />
+          <Route path="/pedidos_clientes" element={<Pedidos_Clientes/>} />
+          <Route path="/crear_pedidos" element={<Crear_Pedidos/>} />
         </Routes>
       </div>
     </div>
