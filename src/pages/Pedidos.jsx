@@ -39,7 +39,7 @@ export default function Pedidos() {
 
   const marcarComoPedidoAFabrica = async (pedidoId) => {
     try {
-      await axios.patch(`http://localhost:5000/api/pedidos/${pedidoId}/finalizar`);
+      await axios.patch(`http://localhost:5000/api/pedidos/${pedidoId}/marcar_enviado`);
       // Refrescar pedidos
       const params = {
         page,
