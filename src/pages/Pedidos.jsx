@@ -60,9 +60,12 @@ export default function Pedidos() {
     if (!codigoPedido || !pedidoSeleccionado) return;
 
     try {
-      await axios.patch(`http://localhost:5000/api/pedidos/${pedidoSeleccionado}/codigo`, {
-        codigo_pedido: codigoPedido
-      });
+              await axios.patch(`http://localhost:5000/api/pedidos/${pedidoSeleccionado}/codigo`, {
+                codigo_pedido: codigoPedido
+              });
+
+              // Luego de cargar el código, marcar como pedido a fábrica
+              await marcarComoPedidoAFabrica(pedidoSeleccionado);
       setShowCodigoPopup(false);
       setCodigoPedido("");
       setPedidoSeleccionado(null);
@@ -163,7 +166,18 @@ export default function Pedidos() {
                 <tbody>
                   {pedido.detalles.slice(0, 10).map((detalle) => (
                     <tr key={detalle.detalle_id} className="border-b">
-                      <td className="py-1">{detalle.codigo_pieza}</td>
+                      <td className="py-1 flex items-center gap-2">
+                        {detalle.codigo_pieza}
+                        <button
+                          className="text-sm text-blue-600 underline"
+                          onClick={(e) => {
+                            e.stopPropagation(); // por si se hace dentro de <details>
+                            navigator.clipboard.writeText(detalle.codigo_pieza);
+                          }}
+                        >
+                          Copiar
+                        </button>
+                      </td>
                       <td className="py-1">{detalle.cantidad_total}</td>
                       <td className="py-1">{detalle.cantidad_recibida ?? "-"}</td>
                       <td className="py-1">{detalle.estado}</td>

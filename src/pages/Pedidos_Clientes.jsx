@@ -6,8 +6,9 @@ export default function Pedidos_Clientes() {
   const [nombre, setNombre] = useState("");
   const [estado, setEstado] = useState("");
   const [codigoPedido, setCodigoPedido] = useState("");
-  const [page, setPage] = useState(1);
   const [codigoPieza, setCodigoPieza] = useState("");
+  const [page, setPage] = useState(1);
+
   const limit = 10;
 
   const fetchPedidos = async () => {
@@ -36,54 +37,23 @@ export default function Pedidos_Clientes() {
     fetchPedidos();
   };
 
-   const estados = [
-    "para pedir",
-    "pedido",
-    "recibido",
-    "avisado",
-    "sin stock fabrica"
-  ];
+  const estados = ["para pedir", "pedido", "recibido", "avisado", "sin stock fabrica"];
 
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Pedidos de Clientes</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-        <input
-          type="text"
-          placeholder="Nombre del cliente"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <select
-          value={estado}
-          onChange={(e) => setEstado(e.target.value)}
-          className="border p-2 rounded"
-        >
+        <input type="text" placeholder="Nombre del cliente" value={nombre} onChange={(e) => setNombre(e.target.value)} className="border p-2 rounded" />
+        <select value={estado} onChange={(e) => setEstado(e.target.value)} className="border p-2 rounded">
           <option value="">Estado del pedido</option>
           {estados.map((e) => (
             <option key={e} value={e}>{e}</option>
           ))}
         </select>
-        <input
-            type="text"
-            placeholder="Código de pieza"
-            value={codigoPieza}
-            onChange={(e) => setCodigoPieza(e.target.value)}
-            className="border p-2 rounded"
-            />
-        <input
-          type="text"
-          placeholder="Código de pedido"
-          value={codigoPedido}
-          onChange={(e) => setCodigoPedido(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <button
-          onClick={handleBuscar}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
+        <input type="text" placeholder="Código de pieza" value={codigoPieza} onChange={(e) => setCodigoPieza(e.target.value)} className="border p-2 rounded" />
+        <input type="text" placeholder="Código de pedido" value={codigoPedido} onChange={(e) => setCodigoPedido(e.target.value)} className="border p-2 rounded" />
+        <button onClick={handleBuscar} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
           Buscar
         </button>
       </div>
@@ -100,6 +70,8 @@ export default function Pedidos_Clientes() {
             <th className="border p-2">Fecha Recibido</th>
             <th className="border p-2">Estado</th>
             <th className="border p-2">Código Pedido</th>
+            <th className="border p-2">Fecha Creación Pedido</th>
+            <th className="border p-2">Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -114,25 +86,58 @@ export default function Pedidos_Clientes() {
               <td className="border p-2">{p.fecha_recibido ? new Date(p.fecha_recibido).toLocaleDateString() : "-"}</td>
               <td className="border p-2">{p.estado}</td>
               <td className="border p-2">{p.codigo_pedido}</td>
+              <td className="border p-2">
+                {p.fecha_creacion
+                  ? new Date(p.fecha_creacion + 'Z').toLocaleString('es-AR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    })
+                  : "-"}
+              </td>
+              <td className="border p-2">
+                {p.estado !== "para pedir" && p.estado !== "recibido" && (
+                  <button
+                    className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                    onClick={async () => {
+                      const ingreso = prompt(`¿Cantidad recibida? (máx. ${p.cantidad})`, p.cantidad);
+                      const cantidadRecibida = parseInt(ingreso);
+                      if (!isNaN(cantidadRecibida) && cantidadRecibida > 0) {
+                        try {
+                          await axios.patch("http://localhost:5000/api/pedidosarmado/marcar_recibido", {
+                            cliente_id: p.cliente_id,
+                            codigo_pieza: p.codigo_pieza,
+                            codigo_pedido: p.codigo_pedido,
+                            cantidad_recibida: cantidadRecibida
+                          });
+                          fetchPedidos();
+                        } catch (err) {
+                          console.error("Error al marcar como recibido", err);
+                          alert("Error al actualizar");
+                        }
+                      } else {
+                        alert("Cantidad inválida.");
+                      }
+                    }}
+                  >
+                    Marcar como recibido
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
 
       <div className="flex justify-between mt-4">
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
-        >
+        <button disabled={page === 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50">
           Anterior
         </button>
         <span className="px-4 py-2">Página {page}</span>
-        <button
-          disabled={pedidos.length < limit}
-          onClick={() => setPage((prev) => prev + 1)}
-          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
-        >
+        <button disabled={pedidos.length < limit} onClick={() => setPage((prev) => prev + 1)} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50">
           Siguiente
         </button>
       </div>
